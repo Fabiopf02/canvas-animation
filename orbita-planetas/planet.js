@@ -2,32 +2,23 @@ const WIDTH = window.innerWidth
 const HEIGHT = window.innerHeight
 const AREA = HEIGHT * 0.8
 const MARGIN_VERTICAL = HEIGHT * 0.1
-const MAX_PLANET_SIZE = 12
+const MAX_PLANET_SIZE = 20
 const MIN_PLANET_SIZE = 5
 const CENTER_X = WIDTH / 2
 const CENTER_Y = HEIGHT / 2
+const G = 0.1
 const SUN_SIZE = 55
-const PLANETS = 3
+const PLANETS = 2
 const CIRCUMFERENCE = 2 * Math.PI * (AREA / 2)
 const ANGLE = CIRCUMFERENCE / 360
 
-const quadrants = {
-  1: (planet) => {
-    planet.x -= planet.velocity
-    planet.y -= planet.velocity
-  },
-  2: (planet) => {
-    planet.x -= planet.velocity
-    planet.y += planet.velocity
-  },
-  3: (planet) => {
-    planet.x += planet.velocity
-    planet.y += planet.velocity
-  },
-  4: (planet) => {
-    planet.x += planet.velocity
-    planet.y -= planet.velocity
-  },
+const SUN = {
+  x: CENTER_X,
+  y: CENTER_Y,
+  circumference: 2 * Math.PI * SUN_SIZE,
+  m: Math.PI * Math.pow(SUN_SIZE, 2),
+  radius: SUN_SIZE,
+  color: '#ffa600',
 }
 
 function getContext() {
@@ -47,7 +38,9 @@ const genRanHex = (size) => {
 }
 
 function getDistance(x1, y1, x2, y2) {
-  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2))
+  const dx = x2 - x1
+  const dy = y2 - y1
+  return Math.sqrt(dx * dx + dy * dy)
 }
 
 function createPlanet() {
@@ -59,19 +52,25 @@ function createPlanet() {
     x += SUN_SIZE * 1.2
   if (y >= HEIGHT / 2 - SUN_SIZE && y <= HEIGHT / 2 + SUN_SIZE)
     y += SUN_SIZE * 1.2
+  const circumference = 2 * Math.PI * radius
+  const d = getDistance(x, y, SUN.x, SUN.y)
+  const m = Math.PI * Math.pow(radius, 2)
+  const speed = Math.sqrt((G * SUN.m) / d) * 1
   return {
     x: x < radius ? radius : x,
     y: y < radius ? radius : y,
     radius,
+    circumference,
+    d,
+    m,
+    angle: 0,
+    speed: Math.random() > 0.5 ? speed : -speed,
     color: genRanHex(6),
-    velocity: (AREA - getDistance(CENTER_X, CENTER_Y, x, y)) * 0.002,
   }
 }
 
 function renderSun(ctx) {
-  const x = WIDTH / 2
-  const y = HEIGHT / 2
-  renderPlanet({ x, y, radius: SUN_SIZE, color: '#ffa600' }, ctx)
+  renderPlanet(SUN, ctx)
 }
 
 function renderPlanet(planet, ctx) {
@@ -84,6 +83,8 @@ function renderPlanet(planet, ctx) {
   ctx.strokeStyle = planet.color
   ctx.stroke()
   ctx.fill()
+  ctx.closePath()
+  drawTexts(ctx, planet)
 }
 
 function drawLines(ctx) {
@@ -127,11 +128,39 @@ function getQuadrant(planet) {
   if (planet.x > WIDTH / 2 && planet.y > HEIGHT / 2) return 4
 }
 
+function getForce(planet, sun) {
+  const distance = getDistance(planet.x, planet.y, sun.x, sun.y)
+  const force = (G * planet.m * sun.m) / Math.pow(distance, 2)
+  return force
+}
+
+function drawTexts(ctx, planet) {
+  ctx.beginPath()
+  ctx.font = '11px Arial'
+  ctx.fillStyle = '#ffffff'
+  ctx.fillText(`x=${Number(planet.x).toFixed(2)}`, planet.x, planet.y + 20)
+  ctx.fillText(`y=${Number(planet.x).toFixed(2)}`, planet.x, planet.y + 30)
+  ctx.fillText(`m=${Number(planet.m).toFixed(2)}`, planet.x, planet.y + 40)
+  if (planet.force) {
+    ctx.fillText(
+      `f=${Number(planet.force).toFixed(2)}`,
+      planet.x,
+      planet.y + 50
+    )
+  }
+  ctx.closePath()
+}
 function simulateOrbit(planets, ctx) {
   for (const planet of planets) {
-    const quadrant = getQuadrant(planet)
-    const fn = quadrants[quadrant]
-    fn(planet)
+    const force = getForce(planet, SUN)
+    const newX = planet.d * Math.cos(planet.angle * (Math.PI / 180))
+    const newY = planet.d * Math.sin(planet.angle * (Math.PI / 180))
+    Object.assign(planet, { force })
+    planet.x =
+      CENTER_X + newX + Math.cos(planet.angle * (Math.PI / 180)) * force + force
+    planet.y =
+      CENTER_Y + newY + Math.sin(planet.angle * (Math.PI / 180)) * force + force
+    planet.angle += planet.speed
     renderPlanet(planet, ctx)
   }
 }
@@ -143,14 +172,16 @@ function main() {
     const planet = createPlanet()
     planets.push(planet)
   }
-  setInterval(() => {
+  function loop(timestamp) {
+    requestAnimationFrame(loop)
     ctx.clearRect(0, 0, WIDTH, HEIGHT)
     drawLines(ctx)
     separateQuadrants(ctx)
     renderSun(ctx)
     drawCircle(ctx)
-    simulateOrbit(planets, ctx)
-  }, 25)
+    simulateOrbit(planets, ctx, timestamp)
+  }
+  loop()
 }
 
 main()
