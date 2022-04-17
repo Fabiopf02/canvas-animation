@@ -10,10 +10,25 @@
       padding: 0;
       margin: 0;
     }
+    * {
+      scrollbar-width: auto;
+      scrollbar-color: #8f54a0 #ffffff;
+    }
+    *::-webkit-scrollbar {
+      width: 14px;
+    }
+    *::-webkit-scrollbar-track {
+      background: #121113;
+    }
+    *::-webkit-scrollbar-thumb {
+      background-color: #8f54a0;
+      border-radius: 10px;
+      border: 3px solid #121113;
+    }
     html, body {
       width: 100vw;
       height: 100vh;
-      overflow: hidden;
+      overflow-x: hidden;
       background: #121113;
       display: flex;
       justify-content: center;
@@ -56,6 +71,8 @@
     <a href="./relogio-numeros/index.html">Relógio - Números</a>
     <a href="./orbita-planetas/index.html">Órbita - Planetas</a>
     <a href="./circulos-aleatorios/index.html">Círculos aleatórios</a>
+    <a href="./game1/index.html">Game 1</a>
+    <a href="./game2/index.html">Game 2</a>
   </div>
 </body>
 </html>
