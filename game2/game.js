@@ -11,6 +11,7 @@ let BULLET_LEFT = false
 let BULLET_RIGHT = false
 let BULLET_UP = false
 let IS_ON_TOP_OF_OBSTACLE = false
+let IS_UNDER_OBSTACLE = false
 const points = []
 const bullets = []
 const obstacles = []
@@ -60,21 +61,29 @@ const person = {
     ctx.closePath()
   },
   update: function () {
-    if (this.jumping && !IS_ON_TOP_OF_OBSTACLE) {
+    if (this.jumping && !IS_ON_TOP_OF_OBSTACLE && !IS_UNDER_OBSTACLE) {
       const velocity = getVelocity(this.jump_speed, this.jump_time)
+      this.current_jump_speed = velocity
+      this.y -= velocity
+      this.jump_time += 0.15
+    }
+    if (IS_UNDER_OBSTACLE) {
+      const velocity = getVelocity(0, this.jump_time)
       this.current_jump_speed = velocity
       this.y -= velocity
       this.jump_time += 0.15
     }
     if (this.y + this.size >= HEIGHT - SOIL_HEIGHT) {
       this.y = HEIGHT - SOIL_HEIGHT - this.size
+      IS_UNDER_OBSTACLE = false
       this.jumping = false
     }
     if (LEFT) {
       if (this.x <= 0) return
       this.x -= this.speed
     } else if (RIGHT) {
-      if (this.x + this.size >= CENTER_X || this.x + this.size >= WIDTH) return
+      if (this.x + this.size >= CENTER_X * 0.8 || this.x + this.size >= WIDTH)
+        return
       this.x += this.speed
     }
   },
@@ -188,14 +197,14 @@ function isOnTopObstacle(person, obstacle) {
     posX > obstacle.x &&
     person.x < obstacle.x + obstacle.width &&
     person.jumping === true &&
+    !IS_UNDER_OBSTACLE &&
     person.current_jump_speed <= 0
   )
 }
 function leftCollision(person, obstacle) {
-  const posX = person.x + person.size
   return (
-    posX >= obstacle.x &&
-    posX < obstacle.x + obstacle.width &&
+    person.x + person.size >= obstacle.x &&
+    person.x + person.size <= obstacle.x + person.size &&
     person.y + person.size > obstacle.y &&
     person.y < obstacle.y + obstacle.height
   )
@@ -203,17 +212,19 @@ function leftCollision(person, obstacle) {
 function rightCollision(person, obstacle) {
   return (
     person.x <= obstacle.x + obstacle.width &&
-    person.x > obstacle.x - person.size &&
-    person.y + person.size >= obstacle.y &&
-    person.y <= obstacle.y + obstacle.height
+    person.x >= obstacle.x + obstacle.width - person.size &&
+    person.y + person.size > obstacle.y &&
+    person.y < obstacle.y + obstacle.height
   )
 }
 
 function isUnderObstacle(obstacle) {
   return (
-    person.y > obstacle.y + obstacle.height &&
+    person.y >= obstacle.y + obstacle.height - person.size / 2 &&
+    person.y <= obstacle.y + obstacle.height &&
     person.x + person.size > obstacle.x &&
-    person.x < obstacle.x + obstacle.width
+    person.x < obstacle.x + obstacle.width &&
+    HEIGHT - SOIL_HEIGHT - (obstacle.y + obstacle.height) > person.size
   )
 }
 
@@ -224,7 +235,12 @@ function checkObstacleCollision() {
     obstacleIndex++
   ) {
     const obstacle = obstacles[obstacleIndex]
-    console.log(rightCollision(person, obstacle))
+    if (isUnderObstacle(obstacle)) {
+      IS_UNDER_OBSTACLE = true
+      person.jumping = false
+      this.jump_time = 0
+      break
+    }
     if (isOnTopObstacle(person, obstacle)) {
       IS_ON_TOP_OF_OBSTACLE = true
       person.y = obstacle.y - person.size
@@ -233,8 +249,11 @@ function checkObstacleCollision() {
     }
     if (leftCollision(person, obstacle)) {
       person.x = obstacle.x - person.size
-    } else if (rightCollision(person, obstacle)) {
+      break
+    }
+    if (rightCollision(person, obstacle)) {
       person.x = obstacle.x + obstacle.width
+      break
     }
     if (IS_ON_TOP_OF_OBSTACLE) {
       break
@@ -315,10 +334,25 @@ function renderPoints() {
   }
 }
 
-function createEnemie() {
-  ctx.beginPath()
-  ctx.move
-  ctx.closePath()
+function checkBulletObstacleCollision() {
+  for (let bulletIndex = 0; bulletIndex < bullets.length; bulletIndex++) {
+    const bullet = bullets[bulletIndex]
+    for (
+      let obstacleIndex = 0;
+      obstacleIndex < obstacles.length;
+      obstacleIndex++
+    ) {
+      const obstacle = obstacles[obstacleIndex]
+      if (
+        bullet.x + bullet.size >= obstacle.x &&
+        bullet.x <= obstacle.x + obstacle.width &&
+        bullet.y + bullet.size >= obstacle.y &&
+        bullet.y <= obstacle.y + obstacle.height
+      ) {
+        bullets.splice(bulletIndex, 1)
+      }
+    }
+  }
 }
 
 function createBullet() {
@@ -341,6 +375,7 @@ function createBullet() {
     speed: 10,
     vX,
     vY,
+    time: 0,
     draw: function () {
       ctx.beginPath()
       ctx.fillStyle = this.color
@@ -350,7 +385,9 @@ function createBullet() {
     },
     move: function () {
       this.y += this.vY
+      this.vY += GRAVITY * this.time
       this.x += this.vX
+      this.time += 0.00002
     },
   }
   bullets.push(bullet)
@@ -359,7 +396,12 @@ function createBullet() {
 function renderBullets() {
   for (let bulletIndex = 0; bulletIndex < bullets.length; bulletIndex++) {
     const bullet = bullets[bulletIndex]
-    if (bullet.x < 0 || bullet.x > WIDTH) {
+    if (
+      bullet.x < 0 ||
+      bullet.x > WIDTH ||
+      bullet.y + bullet.size < 0 ||
+      bullet.y > HEIGHT
+    ) {
       bullets.splice(bulletIndex, 1)
     } else {
       bullet.move()
@@ -376,6 +418,7 @@ function main() {
     person.update()
     checkPointCollision()
     checkObstacleCollision()
+    checkBulletObstacleCollision()
     ctx.clearRect(0, 0, WIDTH, HEIGHT)
     renderObstacles()
     renderSoil()
