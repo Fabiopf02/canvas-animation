@@ -237,7 +237,7 @@ function renderInfo() {
   ctx.fillText(`gravity: ${GRAVITY}`, 10, 140)
   ctx.fillText(`obstacles: ${OBSTACLES}`, 10, 155)
   ctx.fillText(`score: ${person.score}`, 10, 170)
-  ctx.fillText(`fame speed: ${GAME_SPEED}`, 10, 185)
+  ctx.fillText(`game speed: ${GAME_SPEED}`, 10, 185)
 }
 
 function isOnTopObstacle(person, obstacle) {
