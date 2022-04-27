@@ -15,7 +15,7 @@ let BULLET_UP = false
 let IS_ON_TOP_OF_OBSTACLE = false
 let IS_UNDER_OBSTACLE = false
 let GAME_OVER = false
-let PERSON_COLLISION = true
+let PERSON_COLLISION = false
 const points = []
 const bullets = []
 const obstacles = []
@@ -35,7 +35,7 @@ const colors = {
   tree: '#069647',
   obstacleWithRotation: '#9b49c1',
 }
-const tSky = OBSTACLES.length * WIDTH
+const tSky = OBSTACLES.length * GAME_SPEED * WIDTH
 const sky = {
   r: { t: 163 / tSky, v: 163 },
   g: { t: 204 / tSky, v: 204 },
@@ -177,12 +177,18 @@ const createObstacle = () => {
   const lastObstacle = obstacles[obstacles.length - 1] || {
     x: getRandomX(width),
   }
+  const initialX = getRandomX(width) + lastObstacle.x
+  const initialY = HEIGHT - SOIL_HEIGHT - height
   const obstacle = {
     width,
     height: Math.random() > 0.5 ? height / 2 : height,
-    x: getRandomX(width) + lastObstacle.x,
-    y: HEIGHT - SOIL_HEIGHT - height,
+    initialX,
+    initialY,
+    x: initialX,
+    y: initialY,
     color: colors.obstacle,
+    fixed: Math.random() < 0.6,
+    dY: -1,
     draw: function () {
       ctx.beginPath()
       ctx.fillStyle = this.color
@@ -191,6 +197,11 @@ const createObstacle = () => {
       ctx.closePath()
     },
     move: function () {
+      if (!this.fixed) {
+        if (this.y < this.initialY - 1.8 * this.height) this.dY += 2
+        else if (this.y >= HEIGHT - SOIL_HEIGHT) this.dY -= 2
+        this.y += this.dY * 1
+      }
       if (LEFT) this.x += GAME_SPEED
       if (RIGHT) this.x -= GAME_SPEED
     },
