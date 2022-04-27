@@ -2,7 +2,7 @@ const WIDTH = window.innerWidth
 const HEIGHT = window.innerHeight
 const CENTER_X = WIDTH / 2
 const SOIL_HEIGHT = 100
-const GRAVITY = 10
+const GRAVITY = 12
 const OBSTACLES = 50
 const TREES = 200
 let GAME_SPEED = 10
@@ -15,7 +15,7 @@ let BULLET_UP = false
 let IS_ON_TOP_OF_OBSTACLE = false
 let IS_UNDER_OBSTACLE = false
 let GAME_OVER = false
-let PERSON_COLLISION = false
+let PERSON_COLLISION = true
 const points = []
 const bullets = []
 const obstacles = []
@@ -35,7 +35,7 @@ const colors = {
   tree: '#069647',
   obstacleWithRotation: '#9b49c1',
 }
-const tSky = OBSTACLES.length * GAME_SPEED * WIDTH
+const tSky = (40 * WIDTH) / GAME_SPEED
 const sky = {
   r: { t: 163 / tSky, v: 163 },
   g: { t: 204 / tSky, v: 204 },
@@ -73,8 +73,8 @@ const sun = {
   },
   move: function () {
     const { length } = obstacles
-    if (LEFT) this.x += GAME_SPEED / (length * 0.75)
-    if (RIGHT) this.x -= GAME_SPEED / (length * 0.75)
+    if (LEFT) this.x += GAME_SPEED / (length * 0.6)
+    if (RIGHT) this.x -= GAME_SPEED / (length * 0.6)
   },
 }
 
@@ -114,16 +114,15 @@ const person = {
     if (this.jumping && !IS_ON_TOP_OF_OBSTACLE && !IS_UNDER_OBSTACLE) {
       const velocity = getVelocity(this.jump_speed, this.jump_time)
       this.current_jump_speed = velocity
-      this.y -= velocity
       this.jump_time += 0.15
     }
     if (IS_UNDER_OBSTACLE) {
       const velocity = getVelocity(0, this.jump_time)
       this.current_jump_speed = velocity
-      this.y -= velocity
       this.jump_time += 0.15
     }
-    if (this.y + this.size >= HEIGHT - SOIL_HEIGHT) {
+    this.y -= this.current_jump_speed
+    if (this.y + this.size >= HEIGHT - SOIL_HEIGHT && !IS_ON_TOP_OF_OBSTACLE) {
       this.y = HEIGHT - SOIL_HEIGHT - this.size
       IS_UNDER_OBSTACLE = false
       this.jumping = false
@@ -132,7 +131,7 @@ const person = {
       if (this.x <= 0) return
       this.x -= GAME_SPEED
     } else if (RIGHT) {
-      if (this.x + this.size >= CENTER_X * 0.4 || this.x + this.size >= WIDTH)
+      if (this.x + this.size >= CENTER_X * 0.8 || this.x + this.size >= WIDTH)
         return
       this.x += GAME_SPEED
     }
@@ -255,10 +254,10 @@ function isOnTopObstacle(person, obstacle) {
   const posY = person.y + person.size
   const posX = person.x + person.size
   return (
-    posY >= obstacle.y &&
+    posY - GAME_SPEED >= obstacle.y &&
+    posY < obstacle.y + person.size / 1.8 &&
     posX > obstacle.x &&
     person.x < obstacle.x + obstacle.width &&
-    person.jumping === true &&
     !IS_UNDER_OBSTACLE &&
     person.current_jump_speed <= 0
   )
