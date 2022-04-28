@@ -15,7 +15,7 @@ let BULLET_UP = false
 let IS_ON_TOP_OF_OBSTACLE = false
 let IS_UNDER_OBSTACLE = false
 let GAME_OVER = false
-let PERSON_COLLISION = true
+let PERSON_COLLISION = false
 const points = []
 const bullets = []
 const obstacles = []
@@ -35,7 +35,7 @@ const colors = {
   tree: '#069647',
   obstacleWithRotation: '#9b49c1',
 }
-const tSky = (40 * WIDTH) / GAME_SPEED
+const tSky = (30 * WIDTH) / GAME_SPEED
 const sky = {
   r: { t: 163 / tSky, v: 163 },
   g: { t: 204 / tSky, v: 204 },
@@ -198,7 +198,7 @@ const createObstacle = () => {
     move: function () {
       if (!this.fixed) {
         if (this.y < this.initialY - 1.8 * this.height) this.dY += 2
-        else if (this.y >= HEIGHT - SOIL_HEIGHT) this.dY -= 2
+        else if (this.y + this.height >= HEIGHT - SOIL_HEIGHT) this.dY -= 2
         this.y += this.dY * 1
       }
       if (LEFT) this.x += GAME_SPEED
@@ -473,18 +473,15 @@ function renderBullets() {
 
 function createEnemie() {
   const size = Math.random() * 15 + 25
-  const lastEnemie = enemies[enemies.length - 1] || { x: getRandomX(size) }
-  const x = lastEnemie.x + getRandomX(size)
+  const x = getRandomX(size) * (enemies.length + 1)
   const y = HEIGHT - SOIL_HEIGHT - size
   const speed = Math.random() * 2 + 1
-  const vX = speed
   const enemie = {
     x,
     y,
     size,
     color: colors.enemie,
     speed,
-    vX,
     draw: function () {
       ctx.beginPath()
       ctx.fillStyle = this.color
@@ -493,7 +490,9 @@ function createEnemie() {
       ctx.closePath()
     },
     move: function () {
-      this.x += this.vX
+      if (person.x + person.size < this.x) this.x -= Math.pow(this.speed, 3)
+      if (person.x > this.x + this.size) this.x += speed / 2
+      // this.x += this.speed
     },
   }
   enemies.push(enemie)
@@ -528,7 +527,7 @@ function checkEnemieObstacleCollision() {
         enemie.y + enemie.size >= obstacle.y &&
         enemie.y <= obstacle.y + obstacle.height
       ) {
-        enemie.vX *= -1
+        // enemie.speed *= -2
       }
     }
   }
@@ -750,7 +749,7 @@ function main() {
     }
     checkBulletEnemiesCollision()
     checkBulletObstacleCollision()
-    checkEnemieObstacleCollision()
+    // checkEnemieObstacleCollision()
     ctx.clearRect(0, 0, WIDTH, HEIGHT)
     sun.draw()
     if (!STOPPED) sun.move()
